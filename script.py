@@ -3,6 +3,7 @@ import json
 import yaml
 import openpyxl
 from github import Github
+from datetime import datetime, timedelta
 
 # Prompt the user to enter the GitHub API token
 github_token = input("Enter your GitHub API token: ")
@@ -22,14 +23,26 @@ def get_package_manager(repo):
     If neither are found, returns 'No'.
     """
     try:
-        if 'package-lock.json' in [content.name for content in repo.get_contents('/')]:
+        # Get the contents of the root directory of the repository
+        root_contents = [content.name for content in repo.get_contents('/')]
+
+        # Check if 'package-lock.json' exists in the root contents
+        if 'package-lock.json' in root_contents:
+            # If 'package-lock.json' is found, return 'NPM' as the package manager
             return 'NPM'
-        elif 'yarn.lock' in [content.name for content in repo.get_contents('/')]:
+
+        # Check if 'yarn.lock' exists in the root contents
+        elif 'yarn.lock' in root_contents:
+            # If 'yarn.lock' is found, return 'Yarn' as the package manager
             return 'Yarn'
+
+        # If neither 'package-lock.json' nor 'yarn.lock' is found, return 'No'
         else:
             return 'No'
     except Exception:
+        # Return 'No' if any exception occurs (e.g., network error, authentication failure)
         return 'No'
+
 
 def get_dependency_management(repo):
     """
@@ -37,8 +50,13 @@ def get_dependency_management(repo):
     If neither are found, returns 'No'.
     """
     try:
+        # Retrieve the total count of pull requests created by dependabot
         dependabot_prs = repo.get_pulls(state='all', creator='dependabot').totalCount
+
+        # Retrieve the total count of pull requests created by renovate
         renovate_prs = repo.get_pulls(state='all', creator='renovate').totalCount
+
+        # Check if either dependabot or renovate pull requests exist
         if dependabot_prs > 0:
             return 'Dependabot'
         elif renovate_prs > 0:
@@ -46,7 +64,9 @@ def get_dependency_management(repo):
         else:
             return 'No'
     except Exception:
+        # Return 'No' if any exception occurs (e.g., network error, authentication failure)
         return 'No'
+
 
 def get_semantic_release(repo):
     """
@@ -54,37 +74,97 @@ def get_semantic_release(repo):
     If not found, returns 'No'.
     """
     try:
+        # Retrieve the contents of package.json file
         package_json = json.loads(repo.get_contents('package.json').decoded_content)
-        return 'Yes' if 'semantic-release' in package_json.get('devDependencies', {}) else 'No'
+
+        # Check if 'semantic-release' is present in the 'devDependencies' section
+        if 'semantic-release' in package_json.get('devDependencies', {}):
+            return 'Yes'
+        else:
+            return 'No'
     except Exception:
+        # Return 'No' if any exception occurs (e.g., network error, invalid JSON, absence of package.json)
         return 'No'
 
-def get_gha(workflows):
+
+def get_gha(workflows, last_year_limit=365):
     """
-    Check if any GitHub Actions workflows exist in the repo.
-    If not found, returns 'No'.
+    Check if any GitHub Actions workflows exist in the repo and have been used within the last year.
+    If not found or not used within the last year, returns 'No'.
     """
-    return 'Yes' if workflows else 'No'
+    if workflows:
+        # Get the current date
+        today = datetime.now()
+
+        # Calculate the date limit for the last year
+        last_year = today - timedelta(days=last_year_limit)
+
+        # Check if any workflow was used within the last year
+        for workflow in workflows:
+            last_run = workflow.last_modified
+            if last_run > last_year:
+                return 'Yes'
+
+    return 'No'
+
 
 def get_workflow_info(workflows):
     """
-    To be implemented.
-    Parses the workflows and extracts necessary information like Integration Suite, Concurrency Rule, Mend
+    Parses the workflows and extracts necessary information like Integration Suite, Concurrency Rule, Mend.
+    Returns a dictionary containing the extracted information.
     """
-    pass
+    workflow_info = {}
 
-def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha):
+    for workflow in workflows:
+        # Extract the workflow file name and path
+        workflow_name = workflow.name
+        workflow_path = workflow.path
+
+        # Perform parsing or extraction logic specific to your requirements
+        # Here, you can access the workflow content, parse it using a YAML parser, and extract the desired information
+
+        # Example: Parsing the workflow YAML file using PyYAML
+        workflow_content = workflow.decoded_content.decode("utf-8")
+        workflow_yaml = yaml.safe_load(workflow_content)
+
+        # Extract Integration Suite
+        integration_suite = workflow_yaml.get("env", {}).get("INTEGRATION_SUITE")
+
+        # Extract Concurrency Rule
+        concurrency_rule = workflow_yaml.get("concurrency", {}).get("group")
+
+        # Extract Mend
+        mend = workflow_yaml.get("steps", {}).get("mend")
+
+        # Add the extracted information to the workflow_info dictionary
+        workflow_info[workflow_name] = {
+            "Integration Suite (GHA)": integration_suite,
+            "Concurrency Rule (GHA)": concurrency_rule,
+            "Mend (GHA)": mend,
+        }
+
+    return workflow_info
+
+
+def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha, integration_suite=None, concurrency_rule=None, mend=None):
     """
     Updates the row for the specified repo in the Excel sheet with the provided values.
+    If the repository name is not found, adds a new row with the values.
     """
     for row in sheet.iter_rows(min_row=2):
         if row[0].value == repo_name:
-            row[1].value = package_manager
-            row[2].value = dependency_management
-            row[3].value = semantic_release
-            row[4].value = gha
-            # To-do: Update more columns as per the Excel sheet structure
+            row[3].value = package_manager
+            row[4].value = dependency_management
+            row[5].value = semantic_release
+            row[6].value = gha
+            row[7].value = integration_suite
+            row[8].value = concurrency_rule
+            row[9].value = mend
             break
+    else:
+        # If the repository name is not found, add a new row with the values
+        sheet.append([repo_name, '', '', package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend])
+
 
 def process_repo(repo):
     """
@@ -95,8 +175,16 @@ def process_repo(repo):
     semantic_release = get_semantic_release(repo)
     workflows = repo.get_contents(".github/workflows")
     gha = get_gha(workflows)
-    # To-do: Call get_workflow_info to gather more workflow information
-    update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)
+    workflow_info = get_workflow_info(workflows)  # Call get_workflow_info function
+    if workflow_info:
+        for workflow_name, info in workflow_info.items():
+            integration_suite = info.get("Integration Suite (GHA)")
+            concurrency_rule = info.get("Concurrency Rule (GHA)")
+            mend = info.get("Mend (GHA)")
+            update_excel(repo.name, package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend)  # Pass individual workflow information to update_excel function
+    else:
+        update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
+
 
 # Process the specified repository
 try:
