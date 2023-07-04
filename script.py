@@ -4,9 +4,9 @@ import yaml
 import openpyxl
 from github import Github
 
-# GitHub Token
-TOKEN = os.getenv('GITHUB_TOKEN')
-g = Github(TOKEN)
+# Prompt the user to enter the GitHub API token
+github_token = input("Enter your GitHub API token: ")
+g = Github(github_token)
 
 # Organisation
 org = g.get_organization('Your-Organisation')
