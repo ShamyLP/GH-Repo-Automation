@@ -8,8 +8,9 @@ from github import Github
 github_token = input("Enter your GitHub API token: ")
 g = Github(github_token)
 
-# Organisation
-org = g.get_organization('HT2-Labs')
+# Repository
+repo_name = input("Enter the repository name: ")
+repo = g.get_repo(repo_name)
 
 # Open Excel Workbook
 wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')
@@ -97,17 +98,11 @@ def process_repo(repo):
     # To-do: Call get_workflow_info to gather more workflow information
     update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)
 
-def process_all_repos():
-    """
-    Processes all repos in the organization and saves the Excel sheet.
-    """
-    for repo in org.get_repos():
-        try:
-            process_repo(repo)
-        except Exception as e:
-            print(f"Error processing repo {repo.name}: {str(e)}")
-            continue
-    wb.save('LP GitHub Repos.xlsx')
+# Process the specified repository
+try:
+    process_repo(repo)
+except Exception as e:
+    print(f"Error processing repo {repo.name}: {str(e)}")
 
-# Main script execution
-process_all_repos()
+# Save the Excel sheet
+wb.save('LP GitHub Repos.xlsx')
