@@ -29,12 +29,12 @@ def get_package_manager(repo):
 
         # Check if 'package-lock.json' exists in the root contents
         if 'package-lock.json' in root_contents:
-            # If 'package-lock.json' is found, return 'NPM' as the package manager
+            # If 'package-lock.json' is found, return 'Yes (NPM)' as the package manager
             return 'Yes (NPM)'
 
         # Check if 'yarn.lock' exists in the root contents
         elif 'yarn.lock' in root_contents:
-            # If 'yarn.lock' is found, return 'Yarn' as the package manager
+            # If 'yarn.lock' is found, return 'Yes (Yarn)' as the package manager
             return 'Yes (Yarn)'
 
         # If neither 'package-lock.json' nor 'yarn.lock' is found, return 'No'
