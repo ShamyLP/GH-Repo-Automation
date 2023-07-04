@@ -1,263 +1,293 @@
-import unittest
-from unittest.mock import Mock, patch
-from openpyxl import Workbook
-from datetime import datetime
-from io import BytesIO
+import os
+import json
+import yaml
+import openpyxl
+from github import Github
+from datetime import datetime, timedelta
 
-# Import the functions to be tested
-from script import get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info, update_excel, process_repo
+# Prompt the user to enter the GitHub API token
+github_token = input("Enter your GitHub API token: ")
+g = Github(github_token)
+
+# Open Excel Workbook
+wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')
+sheet = wb.active
+
+def get_package_manager(repo):
+    """
+    Check for 'package-lock.json' or 'yarn.lock' in repo root.
+    If neither are found, returns 'No'.
+    """
+    try:
+        # Get the contents of the root directory of the repository
+        root_contents = [content.name for content in repo.get_contents('/')]
+
+        # Check if 'package-lock.json' exists in the root contents
+        if 'package-lock.json' in root_contents:
+            # If 'package-lock.json' is found, return 'NPM' as the package manager
+            return 'NPM'
+
+        # Check if 'yarn.lock' exists in the root contents
+        elif 'yarn.lock' in root_contents:
+            # If 'yarn.lock' is found, return 'Yarn' as the package manager
+            return 'Yarn'
+
+        # If neither 'package-lock.json' nor 'yarn.lock' is found, return 'No'
+        else:
+            return 'No'
+    except Exception:
+        # Return 'No' if any exception occurs (e.g., network error, authentication failure)
+        return 'No'
 
 
-class TestGitHubRepoProcessing(unittest.TestCase):
-    def setUp(self):
-        # Create a mock repository object for testing
-        self.repo = Mock()
-        self.repo.name = "sample-repo"
-        self.repo.get_contents.return_value = []
-        self.repo.get_pulls.return_value.totalCount = 0
+def get_dependency_management(repo):
+    """
+    Check for dependabot or renovate pull requests in the repo.
+    If neither are found, returns 'No'.
+    """
+    try:
+        # Retrieve the total count of pull requests created by dependabot
+        dependabot_prs = repo.get_pulls(state='all', creator='dependabot').totalCount
 
-        # Create an in-memory Excel workbook for testing
-        self.workbook = Workbook()
-        self.sheet = self.workbook.active
+        # Retrieve the total count of pull requests created by renovate
+        renovate_prs = repo.get_pulls(state='all', creator='renovate').totalCount
 
-        # Patch the openpyxl functions used in the code
-        patcher = patch("<module_name>.openpyxl.load_workbook", return_value=self.workbook)
-        self.mock_load_workbook = patcher.start()
-        self.addCleanup(patcher.stop)
+        # Check if either dependabot or renovate pull requests exist
+        if dependabot_prs > 0:
+            return 'Dependabot'
+        elif renovate_prs > 0:
+            return 'Renovate'
+        else:
+            return 'No'
+    except Exception:
+        # Return 'No' if any exception occurs (e.g., network error, authentication failure)
+        return 'No'
 
-    def test_get_package_manager_with_package_lock(self):
-        # Mock the repository contents to include 'package-lock.json'
-        self.repo.get_contents.return_value = [Mock(name="package-lock.json")]
 
-        # Call the get_package_manager function
-        package_manager = get_package_manager(self.repo)
+def get_semantic_release(repo):
+    """
+    Check for 'semantic-release' in devDependencies in package.json in the repo.
+    If not found, returns 'No'.
+    """
+    try:
+        # Retrieve the contents of package.json file
+        package_json = json.loads(repo.get_contents('package.json').decoded_content)
 
-        # Assert the expected package_manager value
-        self.assertEqual(package_manager, "NPM")
+        # Check if 'semantic-release' is present in the 'devDependencies' section
+        if 'semantic-release' in package_json.get('devDependencies', {}):
+            return 'Yes'
+        else:
+            return 'No'
+    except Exception:
+        # Return 'No' if any exception occurs (e.g., network error, invalid JSON, absence of package.json)
+        return 'No'
 
-    def test_get_package_manager_with_yarn_lock(self):
-        # Mock the repository contents to include 'yarn.lock'
-        self.repo.get_contents.return_value = [Mock(name="yarn.lock")]
 
-        # Call the get_package_manager function
-        package_manager = get_package_manager(self.repo)
+def get_gha(workflows, last_year_limit=365):
+    """
+    Check if any GitHub Actions workflows exist in the repo and have been used within the last year.
+    If not found or not used within the last year, returns 'No'.
+    """
+    if workflows:
+        # Get the current date
+        today = datetime.now()
 
-        # Assert the expected package_manager value
-        self.assertEqual(package_manager, "Yarn")
+        # Calculate the date limit for the last year
+        last_year = today - timedelta(days=last_year_limit)
 
-    def test_get_package_manager_without_lock_files(self):
-        # Mock the repository contents to exclude lock files
-        self.repo.get_contents.return_value = []
+        # Check if any workflow was used within the last year
+        for workflow in workflows:
+            last_run = workflow.last_modified
+            if last_run > last_year:
+                return 'Yes'
 
-        # Call the get_package_manager function
-        package_manager = get_package_manager(self.repo)
+    return 'No'
 
-        # Assert the expected package_manager value
-        self.assertEqual(package_manager, "No")
 
-    def test_get_dependency_management_with_dependabot(self):
-        # Mock the repository to have Dependabot pull requests
-        self.repo.get_pulls.return_value.totalCount = 2
-        self.repo.get_pulls.return_value[0].creator.login = "dependabot"
+def get_workflow_info(workflows):
+    """
+    Parses the workflows and extracts necessary information like Integration Suite, Concurrency Rule, Mend.
+    Returns a dictionary containing the extracted information.
+    """
+    workflow_info = {}
 
-        # Call the get_dependency_management function
-        dependency_management = get_dependency_management(self.repo)
+    for workflow in workflows:
+        # Extract the workflow file name and path
+        workflow_name = workflow.name
+        workflow_path = workflow.path
 
-        # Assert the expected dependency_management value
-        self.assertEqual(dependency_management, "Dependabot")
+        # Perform parsing or extraction logic specific to your requirements
+        # Here, you can access the workflow content, parse it using a YAML parser, and extract the desired information
 
-    def test_get_dependency_management_with_renovate(self):
-        # Mock the repository to have Renovate pull requests
-        self.repo.get_pulls.return_value.totalCount = 1
-        self.repo.get_pulls.return_value[0].creator.login = "renovate"
+        # Example: Parsing the workflow YAML file using PyYAML
+        workflow_content = workflow.decoded_content.decode("utf-8")
+        workflow_yaml = yaml.safe_load(workflow_content)
 
-        # Call the get_dependency_management function
-        dependency_management = get_dependency_management(self.repo)
+        # Extract Integration Suite
+        integration_suite = workflow_yaml.get("env", {}).get("INTEGRATION_SUITE")
 
-        # Assert the expected dependency_management value
-        self.assertEqual(dependency_management, "Renovate")
+        # Extract Concurrency Rule
+        concurrency_rule = workflow_yaml.get("concurrency", {}).get("group")
 
-    def test_get_dependency_management_without_management(self):
-        # Mock the repository to have no dependency management pull requests
-        self.repo.get_pulls.return_value.totalCount = 0
+        # Extract Mend
+        mend = workflow_yaml.get("steps", {}).get("mend")
 
-        # Call the get_dependency_management function
-        dependency_management = get_dependency_management(self.repo)
+        # Add the extracted information to the workflow_info dictionary
+        workflow_info[workflow_name] = {
+            "Integration Suite": integration_suite,
+            "Concurrency Rule": concurrency_rule,
+            "Mend": mend,
+        }
 
-        # Assert the expected dependency_management value
-        self.assertEqual(dependency_management, "No")
+    return workflow_info
 
-    def test_get_semantic_release_with_semantic_release_deps(self):
-        # Mock the repository to have 'semantic-release' in devDependencies
-        self.repo.get_contents.return_value = [Mock(name="package.json", decoded_content=b'{"devDependencies": {"semantic-release": "^1.0.0"}}')]
 
-        # Call the get_semantic_release function
-        semantic_release = get_semantic_release(self.repo)
+def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha,
+                 integration_suite=None, concurrency_rule=None, mend=None):
+    """
+    Updates the row for the specified repo in the Excel sheet with the provided values.
+    If the repository name is not found, adds a new row with the values.
+    """
+    for row in sheet.iter_rows(min_row=2):
+        if row[0].value == repo_name:
+            row[3].value = package_manager
+            row[4].value = dependency_management
+            row[5].value = semantic_release
+            row[6].value = gha
+            row[7].value = integration_suite
+            row[8].value = concurrency_rule
+            row[9].value = mend
+            break
+    else:
+        # If the repository name is not found, add a new row with the values
+        sheet.append(
+            [repo_name, '', '', package_manager, dependency_management, semantic_release, gha,
+             integration_suite, concurrency_rule, mend])
 
-        # Assert the expected semantic_release value
-        self.assertEqual(semantic_release, "Yes")
 
-    def test_get_semantic_release_without_semantic_release_deps(self):
-        # Mock the repository to not have 'semantic-release' in devDependencies
-        self.repo.get_contents.return_value = [Mock(name="package.json", decoded_content=b'{"devDependencies": {}}')]
+def process_repo(repo):
+    """
+    Processes a single repo and updates the Excel sheet accordingly.
+    """
+    package_manager = get_package_manager(repo)
+    dependency_management = get_dependency_management(repo)
+    semantic_release = get_semantic_release(repo)
+    workflows = repo.get_contents(".github/workflows")
+    gha = get_gha(workflows)
+    workflow_info = get_workflow_info(workflows)  # Call get_workflow_info function
+    update_excel(repo.name, package_manager, dependency_management, semantic_release, gha, workflow_info)  # Pass workflow_info to update_excel function
 
-        # Call the get_semantic_release function
-        semantic_release = get_semantic_release(self.repo)
 
-        # Assert the expected semantic_release value
-        self.assertEqual(semantic_release, "No")
+def run_get_package_manager():
+    """
+    Executes the get_package_manager() function and displays the result.
+    """
+    # Repository
+    repo_name = input("Enter the repository name: ")
+    repo = g.get_repo(repo_name)
 
-    def test_get_gha_with_recent_workflow_runs(self):
-        # Mock the repository to have recent workflow runs
-        workflow = Mock()
-        workflow.last_modified = datetime.now()
+    package_manager = get_package_manager(repo)
+    print(f"Package Manager: {package_manager}")
 
-        self.repo.get_contents.return_value = [workflow]
 
-        # Call the get_gha function
-        gha = get_gha(self.repo.get_contents(".github/workflows"))
+def run_get_dependency_management():
+    """
+    Executes the get_dependency_management() function and displays the result.
+    """
+    # Repository
+    repo_name = input("Enter the repository name: ")
+    repo = g.get_repo(repo_name)
 
-        # Assert the expected gha value
-        self.assertEqual(gha, "Yes")
+    dependency_management = get_dependency_management(repo)
+    print(f"Dependency Management: {dependency_management}")
 
-    def test_get_gha_with_no_recent_workflow_runs(self):
-        # Mock the repository to not have recent workflow runs
-        workflow = Mock()
-        workflow.last_modified = datetime(2022, 1, 1)
 
-        self.repo.get_contents.return_value = [workflow]
+def run_get_semantic_release():
+    """
+    Executes the get_semantic_release() function and displays the result.
+    """
+    # Repository
+    repo_name = input("Enter the repository name: ")
+    repo = g.get_repo(repo_name)
 
-        # Call the get_gha function
-        gha = get_gha(self.repo.get_contents(".github/workflows"))
+    semantic_release = get_semantic_release(repo)
+    print(f"Semantic Release: {semantic_release}")
 
-        # Assert the expected gha value
-        self.assertEqual(gha, "No")
 
-    def test_get_workflow_info(self):
-        # Mock the repository workflows and their content
-        workflows = [
-            Mock(name="workflow1.yml", path=".github/workflows/workflow1.yml", decoded_content=b"content1"),
-            Mock(name="workflow2.yml", path=".github/workflows/workflow2.yml", decoded_content=b"content2"),
-        ]
+def run_get_gha():
+    """
+    Executes the get_gha() function and displays the result.
+    """
+    # Repository
+    repo_name = input("Enter the repository name: ")
+    repo = g.get_repo(repo_name)
 
-        # Patch the workflow YAML parsing to return predefined values
-        with patch("<module_name>.yaml.safe_load") as mock_yaml_load:
-            mock_yaml_load.side_effect = [
-                {"env": {"INTEGRATION_SUITE": "Yes"}, "concurrency": {"group": "Yes"}, "steps": {"mend": "Yes"}},
-                {"env": {}, "concurrency": {}, "steps": {}},
-            ]
+    workflows = repo.get_contents(".github/workflows")
+    gha = get_gha(workflows)
+    print(f"GHA: {gha}")
 
-            # Call the get_workflow_info function
-            workflow_info = get_workflow_info(workflows)
 
-            # Assert the expected workflow_info values
-            self.assertEqual(
-                workflow_info,
-                {
-                    "workflow1.yml": {"Integration Suite": "Yes", "Concurrency Rule": "Yes", "Mend": "Yes"},
-                    "workflow2.yml": {"Integration Suite": None, "Concurrency Rule": None, "Mend": None},
-                },
-            )
+def run_update_excel():
+    """
+    Executes the update_excel() function.
+    """
+    # Repository
+    repo_name = input("Enter the repository name: ")
+    repo = g.get_repo(repo_name)
 
-    def test_update_excel_existing_repo(self):
-        # Create a sample Excel sheet with an existing repository row
-        self.sheet.append(["sample-repo", "", "", "No", "No", "No", "No", None, None, None])
+    package_manager = get_package_manager(repo)
+    dependency_management = get_dependency_management(repo)
+    semantic_release = get_semantic_release(repo)
+    workflows = repo.get_contents(".github/workflows")
+    gha = get_gha(workflows)
+    workflow_info = get_workflow_info(workflows)
 
-        # Call the update_excel function
-        update_excel("sample-repo", "NPM", "Renovate", "Yes", "Yes", "Yes", "Yes", "Yes")
+    # Prompt for additional information
+    integration_suite = input("Integration Suite (GHA) [Yes/No]: ")
+    concurrency_rule = input("Concurrency Rule (GHA) [Yes/No]: ")
+    mend = input("Mend (GHA) [Yes/No]: ")
 
-        # Retrieve the updated row values
-        row_values = [cell.value for cell in self.sheet[2]]
+    update_excel(repo_name, package_manager, dependency_management, semantic_release, gha,
+                 integration_suite, concurrency_rule, mend)
 
-        # Assert the expected updated row values
-        self.assertEqual(row_values, ["sample-repo", "", "", "NPM", "Renovate", "Yes", "Yes", "Yes", "Yes", "Yes"])
+    # Save the Excel sheet
+    wb.save('LP GitHub Repos.xlsx')
 
-    def test_update_excel_new_repo(self):
-        # Call the update_excel function for a new repository
-        update_excel("new-repo", "Yarn", "Dependabot", "No", "No", "No", "No", "No")
 
-        # Retrieve the updated row values
-        row_values = [cell.value for cell in self.sheet[2]]
+def main():
+    """
+    Main function to run the program.
+    """
+    print("LP GitHub Repo Analysis")
 
-        # Assert the expected updated row values
-        self.assertEqual(row_values, ["new-repo", "", "", "Yarn", "Dependabot", "No", "No", "No", "No", "No"])
+    while True:
+        print("\nSelect an option:")
+        print("1. Get Package Manager")
+        print("2. Get Dependency Management")
+        print("3. Get Semantic Release")
+        print("4. Get GHA")
+        print("5. Update Excel")
+        print("0. Exit")
 
-    def test_process_repo_success(self):
-        # Patch the necessary functions to return predefined values
-        with patch("<module_name>.get_package_manager", return_value="NPM") as mock_get_package_manager, \
-                patch("<module_name>.get_dependency_management", return_value="Renovate") as mock_get_dependency_management, \
-                patch("<module_name>.get_semantic_release", return_value="Yes") as mock_get_semantic_release, \
-                patch("<module_name>.get_gha", return_value="Yes") as mock_get_gha, \
-                patch("<module_name>.get_workflow_info", return_value={"workflow.yml": {}}) as mock_get_workflow_info, \
-                patch("<module_name>.update_excel") as mock_update_excel:
+        choice = input("Enter your choice: ")
 
-            # Call the process_repo function
-            process_repo(self.repo)
+        if choice == '1':
+            run_get_package_manager()
+        elif choice == '2':
+            run_get_dependency_management()
+        elif choice == '3':
+            run_get_semantic_release()
+        elif choice == '4':
+            run_get_gha()
+        elif choice == '5':
+            run_update_excel()
+        elif choice == '0':
+            break
+        else:
+            print("Invalid choice. Please try again.")
 
-            # Assert that the necessary functions were called with the expected arguments
-            mock_get_package_manager.assert_called_once_with(self.repo)
-            mock_get_dependency_management.assert_called_once_with(self.repo)
-            mock_get_semantic_release.assert_called_once_with(self.repo)
-            mock_get_gha.assert_called_once_with([])
-            mock_get_workflow_info.assert_called_once_with([])
-            mock_update_excel.assert_called_once_with(
-                "sample-repo", "NPM", "Renovate", "Yes", "Yes", {}, None, None
-            )
-
-    def test_process_repo_error(self):
-        # Patch the necessary functions to raise an exception
-        with patch("<module_name>.get_package_manager", side_effect=Exception("Error processing package manager")), \
-                patch("<module_name>.get_dependency_management", return_value="Renovate"), \
-                patch("<module_name>.get_semantic_release", return_value="Yes"), \
-                patch("<module_name>.get_gha", return_value="Yes"), \
-                patch("<module_name>.get_workflow_info", return_value={"workflow.yml": {}}), \
-                patch("<module_name>.update_excel"):
-
-            # Call the process_repo function and catch the exception
-            with self.assertRaises(Exception) as cm:
-                process_repo(self.repo)
-
-            # Assert that the exception message contains the repository name
-            self.assertIn("sample-repo", str(cm.exception))
-
-    def test_full_processing_workflow(self):
-        # Create a sample repository with predefined values
-        repo = Mock()
-        repo.name = "sample-repo"
-        repo.get_contents.return_value = [Mock(name="package-lock.json")]
-        repo.get_pulls.return_value.totalCount = 1
-        repo.get_pulls.return_value[0].creator.login = "dependabot"
-
-        # Patch the necessary functions to return predefined values
-        with patch("<module_name>.Github", return_value=Mock(get_repo=lambda name: repo)), \
-                patch("<module_name>.get_workflow_info", return_value={"workflow.yml": {}}) as mock_get_workflow_info, \
-                patch("<module_name>.process_repo") as mock_process_repo:
-
-            # Call the main function to process the repository
-            main_function()
-
-            # Assert that the necessary functions were called with the expected arguments
-            mock_get_workflow_info.assert_called_once_with([])
-            mock_process_repo.assert_called_once_with(repo)
-
-    def test_full_processing_workflow_with_error(self):
-        # Create a sample repository with an exception-raising get_package_manager function
-        repo = Mock()
-        repo.name = "sample-repo"
-        repo.get_package_manager.side_effect = Exception("Error processing package manager")
-
-        # Patch the necessary functions to return predefined values
-        with patch("<module_name>.Github", return_value=Mock(get_repo=lambda name: repo)), \
-                patch("<module_name>.get_workflow_info", return_value={"workflow.yml": {}}), \
-                patch("<module_name>.process_repo"):
-
-            # Call the main function to process the repository and catch the exception
-            with self.assertRaises(Exception) as cm:
-                main_function()
-
-            # Assert that the exception message contains the repository name
-            self.assertIn("sample-repo", str(cm.exception))
+    print("Exiting...")
 
 
 if __name__ == "__main__":
-    unittest.main()
+    main()
