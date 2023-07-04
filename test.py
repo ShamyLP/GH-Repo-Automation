@@ -5,7 +5,7 @@ from datetime import datetime
 from io import BytesIO
 
 # Import the functions to be tested
-from <module_name> import get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info, update_excel, process_repo
+from script import get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info, update_excel, process_repo
 
 
 class TestGitHubRepoProcessing(unittest.TestCase):
