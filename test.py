@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 from github import Github
 from datetime import datetime, timedelta
-from main import get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info
+from script import get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info
 
 
 class TestLPGitHubRepoAnalysis(unittest.TestCase):
