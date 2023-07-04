@@ -9,10 +9,10 @@ github_token = input("Enter your GitHub API token: ")
 g = Github(github_token)
 
 # Organisation
-org = g.get_organization('Your-Organisation')
+org = g.get_organization('HT2-Labs')
 
 # Open Excel Workbook
-wb = openpyxl.load_workbook('LP_GitHub_Repos.xlsx')
+wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')
 sheet = wb.active
 
 def get_package_manager(repo):
@@ -107,7 +107,7 @@ def process_all_repos():
         except Exception as e:
             print(f"Error processing repo {repo.name}: {str(e)}")
             continue
-    wb.save('LP_GitHub_Repos.xlsx')
+    wb.save('LP GitHub Repos.xlsx')
 
 # Main script execution
 process_all_repos()
