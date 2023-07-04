@@ -21,17 +21,17 @@ This project provides a script (`script.py`) and a test script (`test.py`) to au
 ## Usage
 
 1. Clone the repository or download the `script.py` and `test.py` files.
-2. Install the required libraries by running the following command in your terminal: `pip install openpyxl PyGithub`
+2. Install the required libraries by running the following command in your terminal: ``pip install openpyxl PyGithub``
 3. **Set up your GitHub API token:**
 - Create a personal access token (PAT) on GitHub with appropriate access permissions to the organization and repositories you want to access.
 - Set the token as an environment variable named `GITHUB_TOKEN` to authenticate with the GitHub API.
 4. Modify the `script.py` file:
 - Update the repository name in the `repo_name` variable to the target repository you want to analyze.
 - Update the path to your Excel spreadsheet in the `wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')` line.
-5. Execute the script by running the following command in your terminal: `python script.py`
+5. Execute the script by running the following command in your terminal: ``python script.py``
 - The script will prompt you to enter the GitHub API token and repository name.
 - It will gather the required data and update the Excel spreadsheet accordingly.
-6. (Optional) Run the unit tests: `python test.py`
+6. (Optional) Run the unit tests: ``python test.py``
 - The tests will verify the functionality of the functions in `script.py`.
 
 ## Limitations
