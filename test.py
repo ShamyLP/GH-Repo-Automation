@@ -2,66 +2,79 @@ import unittest
 from unittest.mock import MagicMock, patch
 from github import Github
 from datetime import datetime, timedelta
+import openpyxl
+import json
+import yaml
 from script import get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info
 
 
 class TestLPGitHubRepoAnalysis(unittest.TestCase):
 
-    def test_get_package_manager_package_lock(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_package_manager_package_lock(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_contents.return_value = ['file1', 'file2', 'package-lock.json']
-        self.assertEqual(get_package_manager(repo), 'NPM')
+        self.assertEqual(get_package_manager(repo), 'Yes (NPM)')
 
-    def test_get_package_manager_yarn_lock(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_package_manager_yarn_lock(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_contents.return_value = ['file1', 'file2', 'yarn.lock']
-        self.assertEqual(get_package_manager(repo), 'Yarn')
+        self.assertEqual(get_package_manager(repo), 'Yes (Yarn)')
 
-    def test_get_package_manager_no_lock_files(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_package_manager_no_lock_files(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_contents.return_value = ['file1', 'file2']
         self.assertEqual(get_package_manager(repo), 'No')
 
-    def test_get_dependency_management_dependabot(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_dependency_management_dependabot(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_pulls.return_value.totalCount = 3
-        self.assertEqual(get_dependency_management(repo), 'Dependabot')
+        self.assertEqual(get_dependency_management(repo), 'Yes (Dependabot)')
 
-    def test_get_dependency_management_renovate(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_dependency_management_renovate(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_pulls.return_value.totalCount = 5
-        self.assertEqual(get_dependency_management(repo), 'Renovate')
+        self.assertEqual(get_dependency_management(repo), 'Yes (Renovate)')
 
-    def test_get_dependency_management_no_management(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_dependency_management_no_management(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_pulls.return_value.totalCount = 0
         self.assertEqual(get_dependency_management(repo), 'No')
 
-    def test_get_semantic_release_present(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_semantic_release_present(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
-        repo.get_contents.return_value.decoded_content = b'{"devDependencies": {"semantic-release": "^2.0.0"}}'
+        repo.get_contents.return_value.decoded_content = json.dumps({"devDependencies": {"semantic-release": "^2.0.0"}}).encode('utf-8')
         self.assertEqual(get_semantic_release(repo), 'Yes')
 
-    def test_get_semantic_release_not_present(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_semantic_release_not_present(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
-        repo.get_contents.return_value.decoded_content = b'{"devDependencies": {"other-package": "^1.0.0"}}'
+        repo.get_contents.return_value.decoded_content = json.dumps({"devDependencies": {"other-package": "^1.0.0"}}).encode('utf-8')
         self.assertEqual(get_semantic_release(repo), 'No')
 
-    def test_get_semantic_release_invalid_json(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_semantic_release_invalid_json(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
-        repo.get_contents.return_value.decoded_content = b'Invalid JSON'
+        repo.get_contents.return_value.decoded_content = "Invalid JSON".encode('utf-8')
         self.assertEqual(get_semantic_release(repo), 'No')
 
-    def test_get_gha_workflows_used_within_last_year(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_gha_workflows_used_within_last_year(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         workflow1 = MagicMock()
@@ -71,7 +84,8 @@ class TestLPGitHubRepoAnalysis(unittest.TestCase):
         repo.get_contents.return_value = [workflow1, workflow2]
         self.assertEqual(get_gha(repo), 'Yes')
 
-    def test_get_gha_workflows_not_used_within_last_year(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_gha_workflows_not_used_within_last_year(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         workflow1 = MagicMock()
@@ -81,13 +95,15 @@ class TestLPGitHubRepoAnalysis(unittest.TestCase):
         repo.get_contents.return_value = [workflow1, workflow2]
         self.assertEqual(get_gha(repo), 'No')
 
-    def test_get_gha_no_workflows(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_gha_no_workflows(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         repo.get_contents.return_value = []
         self.assertEqual(get_gha(repo), 'No')
 
-    def test_get_workflow_info(self):
+    @patch('builtins.input', side_effect=["token", "repo_name"])
+    def test_get_workflow_info(self, mock_input):
         # Create a mock repository object for testing
         repo = MagicMock()
         workflow1 = MagicMock()
@@ -131,14 +147,14 @@ class TestLPGitHubRepoAnalysis(unittest.TestCase):
         repo.get_contents.return_value = [workflow1, workflow2]
         expected_result = {
             'workflow1.yaml': {
-                'Integration Suite': 'true',
-                'Concurrency Rule': 'integration',
-                'Mend': None
+                'Integration Suite (GHA)': 'true',
+                'Concurrency Rule (GHA)': 'integration',
+                'Mend (GHA)': None
             },
             'workflow2.yaml': {
-                'Integration Suite': 'false',
-                'Concurrency Rule': 'integration',
-                'Mend': None
+                'Integration Suite (GHA)': 'false',
+                'Concurrency Rule (GHA)': 'integration',
+                'Mend (GHA)': None
             }
         }
         self.assertEqual(get_workflow_info(repo), expected_result)
