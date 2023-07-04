@@ -58,7 +58,9 @@ def get_dependency_management(repo):
         renovate_prs = repo.get_pulls(state='all', creator='renovate').totalCount
 
         # Check if either dependabot or renovate pull requests exist
-        if dependabot_prs > 0:
+        if dependabot_prs > 0 and renovate_prs > 0:
+            return 'Renovate/Dependabot'
+        elif dependabot_prs > 0:
             return 'Yes (Dependabot)'
         elif renovate_prs > 0:
             return 'Yes (Renovate)'
