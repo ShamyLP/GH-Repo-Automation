@@ -10,10 +10,6 @@ from termcolor import colored
 github_token = input("Enter your GitHub API token: ")
 g = Github(github_token)
 
-# Repository
-repo_name = input("Enter the repository name: ")
-repo = g.get_repo(repo_name)
-
 # Open Excel Workbook
 wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')
 sheet = wb.active
@@ -110,14 +106,15 @@ def get_gha(workflows, last_year_limit=365):
 def get_workflow_info(workflows):
     """
     Parses the workflows and extracts necessary information like Integration Suite, Concurrency Rule, Mend.
-    Returns a dictionary containing the extracted information.
+    Returns a tuple containing a list of workflow names and the extracted information as a dictionary.
     """
+    workflow_names = []
     workflow_info = {}
 
     for workflow in workflows:
         # Extract the workflow file name and path
         workflow_name = workflow.name
-        workflow_path = workflow.path
+        workflow_names.append(workflow_name)  # Add the workflow name to the list
 
         # Perform parsing or extraction logic specific to your requirements
         # Here, you can access the workflow content, parse it using a YAML parser, and extract the desired information
@@ -141,8 +138,7 @@ def get_workflow_info(workflows):
             "Concurrency Rule (GHA)": concurrency_rule,
             "Mend (GHA)": mend,
         }
-
-    return workflow_info
+    return workflow_names, workflow_info
 
 def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha, integration_suite=None, concurrency_rule=None, mend=None):
     """
@@ -182,18 +178,21 @@ def update_excel(repo_name, package_manager, dependency_management, semantic_rel
         if mend is None:
             print(colored(f"Failed to update the Mend (GHA) for {repo_name}", "red"))
 
-def process_repo(repo):
+def process_repo(repo_name):
     """
     Processes a single repo and updates the Excel sheet accordingly.
     """
+    repo = g.get_repo(repo_name)  # Get the repository using the repo_name
     package_manager = get_package_manager(repo)
     dependency_management = get_dependency_management(repo)
     semantic_release = get_semantic_release(repo)
     workflows = repo.get_contents(".github/workflows")
     gha = get_gha(workflows)
-    workflow_info = get_workflow_info(workflows)  # Call get_workflow_info function
+    workflow_names, workflow_info = get_workflow_info(workflows)  # Call get_workflow_info function
+
     if workflow_info:
-        for workflow_name, info in workflow_info.items():
+        for workflow_name in workflow_names:
+            info = workflow_info[workflow_name]
             integration_suite = info.get("Integration Suite (GHA)")
             concurrency_rule = info.get("Concurrency Rule (GHA)")
             mend = info.get("Mend (GHA)")
@@ -201,78 +200,11 @@ def process_repo(repo):
     else:
         update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
 
-# CLI function to execute the get_package_manager function
-def cli_get_package_manager():
-    try:
-        print("Running get_package_manager")
-        package_manager = get_package_manager(repo)
-        print(f"Package Manager: {package_manager}")
-    except Exception as e:
-        print(f"Error running get_package_manager: {str(e)}")
-
-# CLI function to execute the get_dependency_management function
-def cli_get_dependency_management():
-    try:
-        print("Running get_dependency_management")
-        dependency_management = get_dependency_management(repo)
-        print(f"Dependency Management: {dependency_management}")
-    except Exception as e:
-        print(f"Error running get_dependency_management: {str(e)}")
-
-# CLI function to execute the get_semantic_release function
-def cli_get_semantic_release():
-    try:
-        print("Running get_semantic_release")
-        semantic_release = get_semantic_release(repo)
-        print(f"Semantic Release: {semantic_release}")
-    except Exception as e:
-        print(f"Error running get_semantic_release: {str(e)}")
-
-# CLI function to execute the get_gha function
-def cli_get_gha():
-    try:
-        print("Running get_gha")
-        workflows = repo.get_contents(".github/workflows")
-        gha = get_gha(workflows)
-        print(f"GHA: {gha}")
-    except Exception as e:
-        print(f"Error running get_gha: {str(e)}")
-
-# CLI function to execute the get_workflow_info function
-def cli_get_workflow_info():
-    try:
-        print("Running get_workflow_info")
-        workflows = repo.get_contents(".github/workflows")
-        workflow_info = get_workflow_info(workflows)
-        if workflow_info:
-            for workflow_name, info in workflow_info.items():
-                print(f"Workflow: {workflow_name}")
-                print(f"Integration Suite (GHA): {info.get('Integration Suite (GHA)')}")
-                print(f"Concurrency Rule (GHA): {info.get('Concurrency Rule (GHA)')}")
-                print(f"Mend (GHA): {info.get('Mend (GHA)')}")
-                print()
-        else:
-            print("No workflows found.")
-    except Exception as e:
-        print(f"Error running get_workflow_info: {str(e)}")
-
-# Execute the specified CLI function
-try:
-    func_name = input("Enter the function name (get_package_manager, get_dependency_management, get_semantic_release, get_gha, get_workflow_info): ")
-    if func_name == "get_package_manager":
-        cli_get_package_manager()
-    elif func_name == "get_dependency_management":
-        cli_get_dependency_management()
-    elif func_name == "get_semantic_release":
-        cli_get_semantic_release()
-    elif func_name == "get_gha":
-        cli_get_gha()
-    elif func_name == "get_workflow_info":
-        cli_get_workflow_info()
-    else:
-        print("Invalid function name.")
-except Exception as e:
-    print(f"Error executing CLI function: {str(e)}")
+# Iterate over the repositories in the directory
+for filename in os.listdir("HT2-Labs"):
+    if os.path.isdir(os.path.join("HT2-Labs", filename)):
+        repo_name = f"HT2-Labs/{filename}"
+        process_repo(repo_name)
 
 # Save the Excel sheet
 wb.save('LP GitHub Repos.xlsx')
