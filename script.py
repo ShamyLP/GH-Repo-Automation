@@ -182,7 +182,6 @@ def update_excel(repo_name, package_manager, dependency_management, semantic_rel
         if mend is None:
             print(colored(f"Failed to update the Mend (GHA) for {repo_name}", "red"))
 
-
 def process_repo(repo):
     """
     Processes a single repo and updates the Excel sheet accordingly.
@@ -219,7 +218,6 @@ def cli_get_dependency_management():
         print(f"Dependency Management: {dependency_management}")
     except Exception as e:
         print(f"Error running get_dependency_management: {str(e)}")
-
 
 # CLI function to execute the get_semantic_release function
 def cli_get_semantic_release():
