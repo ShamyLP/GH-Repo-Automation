@@ -61,7 +61,7 @@ os.makedirs(org_name, exist_ok=True)
 os.chdir(org_name)
 
 # Step 9: Create a CSV file to save the repository names and clone status
-csv_file_path = "repository_names.csv"
+csv_file_path = "Clone status list.csv"
 csv_file = open(csv_file_path, "w", newline="")
 csv_writer = csv.writer(csv_file)
 csv_writer.writerow(["Clone status list", "Clone Status"])
