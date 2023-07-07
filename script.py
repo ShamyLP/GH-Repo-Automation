@@ -3,6 +3,7 @@ import json
 import yaml
 import openpyxl
 from github import Github
+from github import GithubException, UnknownObjectException
 from datetime import datetime, timedelta
 from termcolor import colored
 
@@ -97,8 +98,9 @@ def get_gha(workflows, last_year_limit=365):
 
         # Check if any workflow was used within the last year
         for workflow in workflows:
-            last_run = datetime.strptime(workflow.last_modified, "%Y-%m-%dT%H:%M:%SZ")
-            if last_run > last_year:
+            last_modified_str = workflow.last_modified
+            last_modified = datetime.strptime(last_modified_str, "%a, %d %b %Y %H:%M:%S %Z")
+            if last_modified > last_year:
                 return 'Yes'
 
     return 'No'
@@ -182,31 +184,46 @@ def process_repo(repo_name):
     """
     Processes a single repo and updates the Excel sheet accordingly.
     """
-    repo = g.get_repo(repo_name)  # Get the repository using the repo_name
-    package_manager = get_package_manager(repo)
-    dependency_management = get_dependency_management(repo)
-    semantic_release = get_semantic_release(repo)
-    workflows = repo.get_contents(".github/workflows")
-    gha = get_gha(workflows)
-    workflow_names, workflow_info = get_workflow_info(workflows)  # Call get_workflow_info function
+    try:
+        repo = g.get_repo(repo_name)  # Get the repository using the repo_name
+        package_manager = get_package_manager(repo)
+        dependency_management = get_dependency_management(repo)
+        semantic_release = get_semantic_release(repo)
 
-    if workflow_info:
-        for workflow_name in workflow_names:
-            info = workflow_info[workflow_name]
-            integration_suite = info.get("Integration Suite (GHA)")
-            concurrency_rule = info.get("Concurrency Rule (GHA)")
-            mend = info.get("Mend (GHA)")
-            update_excel(repo.name, package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend)  # Pass individual workflow information to update_excel function
-    else:
-        update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
+        try:
+            workflows = repo.get_contents(".github/workflows")
+            gha = get_gha(workflows)
+            workflow_names, workflow_info = get_workflow_info(workflows)  # Call get_workflow_info function
+
+            if workflow_info:
+                for workflow_name in workflow_names:
+                    info = workflow_info[workflow_name]
+                    integration_suite = info.get("Integration Suite (GHA)")
+                    concurrency_rule = info.get("Concurrency Rule (GHA)")
+                    mend = info.get("Mend (GHA)")
+                    update_excel(repo.name, package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend)  # Pass individual workflow information to update_excel function
+            else:
+                update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
+
+        except UnknownObjectException as e:
+            if e.status == 404:
+                print(colored(f"Failed to update {repo_name}, make sure that {repo_name} exists and has the .github/workflows directory in its root.\nEnsure that the repository name is correct and that you have appropriate access permissions to the repository and its contents.", "red"))
+            else:
+                raise e
+
+    except GithubException as e:
+        error_message = f"Error processing repo {repo_name}: {str(e)}"
+        print(colored(error_message, "red"))
 
 # Iterate over the repositories in the directory
-for filename in os.listdir("HT2-Labs"):
-    if os.path.isdir(os.path.join("HT2-Labs", filename)):
+repo_dir = "HT2-Labs"
+repo_count = len([filename for filename in os.listdir(repo_dir) if os.path.isdir(os.path.join(repo_dir, filename))])
+for idx, filename in enumerate(os.listdir(repo_dir), 1):
+    if os.path.isdir(os.path.join(repo_dir, filename)):
         repo_name = f"HT2-Labs/{filename}"
-        print(f"Processing repo: {repo_name}")
+        print(colored(f"Processing repo {idx}/{repo_count}: {repo_name}", "white"))
         process_repo(repo_name)
 
 # Save the Excel sheet
 wb.save('LP GitHub Repos.xlsx')
-print("Excel sheet saved successfully.")
+print(colored(f"Excel sheet saved successfully!", "yellow"))
