@@ -31,19 +31,20 @@ This project provides scripts to automate the process of gathering and updating 
 3. **Set up your GitHub API token:**
    - Create a personal access token (PAT) on GitHub with appropriate access permissions to the organization and repositories you want to access.
    - Set the token as an environment variable named `GITHUB_TOKEN` to authenticate with the GitHub API.
-4. Modify the `script.py` file:
-   - Update the repository name in the `repo_name` variable to the target repository you want to analyze.
-   - Update the path to your Excel spreadsheet in the `wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')` line.
-5. Execute the `script.py` script by running the following command in your terminal: `python script.py`
-   - The script will prompt you to enter the GitHub API token and repository name.
-   - It will gather the required data and update the Excel spreadsheet accordingly.
-6. (Optional) Run the unit tests by executing the `test.py` script: `python test.py`
-   - The tests will verify the functionality of the functions in `script.py`.
-7. (Optional) Use the `clone_repos.py` script to clone repositories from a GitHub organization:
+4. Use the `clone_repos.py` script to clone repositories from a GitHub organization:
    - Update the `org_name` and `team_slug` variables with the appropriate organization and team information.
    - Execute the `clone_repos.py` script: `python clone_repos.py`
    - The script will prompt you to enter your personal access token.
    - It will clone the repositories and provide progress updates in the terminal.
+5. Modify the `script.py` file:
+   - Update the repository name in the `repo_name` variable to the target repository you want to analyze.
+   - Update the path to your Excel spreadsheet in the `wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')` line.
+6. Execute the `script.py` script by running the following command in your terminal: `python script.py`
+   - The script will prompt you to enter the GitHub API token and repository name.
+   - It will gather the required data and update the Excel spreadsheet accordingly.
+7. (OPTIONAL) Run the unit tests by executing the `test.py` script: `python test.py`
+   - The tests will verify the functionality of the functions in `script.py`.
+
 
 ## Limitations
 
