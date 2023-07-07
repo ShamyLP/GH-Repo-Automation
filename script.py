@@ -97,7 +97,7 @@ def get_gha(workflows, last_year_limit=365):
 
         # Check if any workflow was used within the last year
         for workflow in workflows:
-            last_run = workflow.last_modified
+            last_run = datetime.strptime(workflow.last_modified, "%Y-%m-%dT%H:%M:%SZ")
             if last_run > last_year:
                 return 'Yes'
 

@@ -64,7 +64,7 @@ os.chdir(org_name)
 csv_file_path = "repository_names.csv"
 csv_file = open(csv_file_path, "w", newline="")
 csv_writer = csv.writer(csv_file)
-csv_writer.writerow(["Repository Name", "Clone Status"])
+csv_writer.writerow(["Clone status list", "Clone Status"])
 csv_file.close()  # Close the CSV file before cloning the repositories
 
 # Step 10: Clone each repository
