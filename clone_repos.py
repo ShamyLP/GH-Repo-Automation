@@ -1,11 +1,17 @@
 import requests
 import os
 import csv
+from github import Github
+from github import Auth
 from colorama import Fore, Style
 
 org_name = "HT2-Labs"
 team_slug = "read_all"
-token = input("Enter your personal access token: ")
+
+# Prompt the user to enter the GitHub API token
+token = input("Enter your GitHub API token: ")
+auth = Auth.Token(token)
+g = Github(auth=auth)
 
 headers = {
     "Authorization": f"token {token}",

@@ -3,13 +3,15 @@ import json
 import yaml
 import openpyxl
 from github import Github
+from github import Auth
 from github import GithubException, UnknownObjectException
 from datetime import datetime, timedelta
 from termcolor import colored
 
 # Prompt the user to enter the GitHub API token
 github_token = input("Enter your GitHub API token: ")
-g = Github(github_token)
+auth = Auth.Token(github_token)
+g = Github(auth=auth)
 
 # Open Excel Workbook
 wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')
