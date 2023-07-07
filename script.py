@@ -4,6 +4,7 @@ import yaml
 import openpyxl
 from github import Github
 from datetime import datetime, timedelta
+from termcolor import colored
 
 # Prompt the user to enter the GitHub API token
 github_token = input("Enter your GitHub API token: ")
@@ -16,7 +17,6 @@ repo = g.get_repo(repo_name)
 # Open Excel Workbook
 wb = openpyxl.load_workbook('LP GitHub Repos.xlsx')
 sheet = wb.active
-
 
 def get_package_manager(repo):
     """
@@ -44,7 +44,6 @@ def get_package_manager(repo):
         # Return 'No' if any exception occurs (e.g., network error, authentication failure)
         return 'No'
 
-
 def get_dependency_management(repo):
     """
     Check for dependabot or renovate pull requests in the repo.
@@ -70,7 +69,6 @@ def get_dependency_management(repo):
         # Return 'No' if any exception occurs (e.g., network error, authentication failure)
         return 'No'
 
-
 def get_semantic_release(repo):
     """
     Check for 'semantic-release' in devDependencies in package.json in the repo.
@@ -88,7 +86,6 @@ def get_semantic_release(repo):
     except Exception:
         # Return 'No' if any exception occurs (e.g., network error, invalid JSON, absence of package.json)
         return 'No'
-
 
 def get_gha(workflows, last_year_limit=365):
     """
@@ -109,7 +106,6 @@ def get_gha(workflows, last_year_limit=365):
                 return 'Yes'
 
     return 'No'
-
 
 def get_workflow_info(workflows):
     """
@@ -148,7 +144,6 @@ def get_workflow_info(workflows):
 
     return workflow_info
 
-
 def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha, integration_suite=None, concurrency_rule=None, mend=None):
     """
     Updates the row for the specified repo in the Excel sheet with the provided values.
@@ -163,10 +158,29 @@ def update_excel(repo_name, package_manager, dependency_management, semantic_rel
             row[7].value = integration_suite
             row[8].value = concurrency_rule
             row[9].value = mend
+
+            # Print success message in green
+            print(colored(f"Updated {repo_name}", "green"))
             break
     else:
         # If the repository name is not found, add a new row with the values
         sheet.append([repo_name, '', '', package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend])
+
+        # Print failure message for each column that wasn't updated in red
+        if package_manager is None:
+            print(colored(f"Failed to update the Package Manager for {repo_name}", "red"))
+        if dependency_management is None:
+            print(colored(f"Failed to update the Dependency Management for {repo_name}", "red"))
+        if semantic_release is None:
+            print(colored(f"Failed to update the Semantic Release for {repo_name}", "red"))
+        if gha is None:
+            print(colored(f"Failed to update the GHA for {repo_name}", "red"))
+        if integration_suite is None:
+            print(colored(f"Failed to update the Integration Suite (GHA) for {repo_name}", "red"))
+        if concurrency_rule is None:
+            print(colored(f"Failed to update the Concurrency Rule (GHA) for {repo_name}", "red"))
+        if mend is None:
+            print(colored(f"Failed to update the Mend (GHA) for {repo_name}", "red"))
 
 
 def process_repo(repo):
@@ -188,7 +202,6 @@ def process_repo(repo):
     else:
         update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
 
-
 # CLI function to execute the get_package_manager function
 def cli_get_package_manager():
     try:
@@ -197,7 +210,6 @@ def cli_get_package_manager():
         print(f"Package Manager: {package_manager}")
     except Exception as e:
         print(f"Error running get_package_manager: {str(e)}")
-
 
 # CLI function to execute the get_dependency_management function
 def cli_get_dependency_management():
@@ -218,7 +230,6 @@ def cli_get_semantic_release():
     except Exception as e:
         print(f"Error running get_semantic_release: {str(e)}")
 
-
 # CLI function to execute the get_gha function
 def cli_get_gha():
     try:
@@ -228,7 +239,6 @@ def cli_get_gha():
         print(f"GHA: {gha}")
     except Exception as e:
         print(f"Error running get_gha: {str(e)}")
-
 
 # CLI function to execute the get_workflow_info function
 def cli_get_workflow_info():
@@ -247,7 +257,6 @@ def cli_get_workflow_info():
             print("No workflows found.")
     except Exception as e:
         print(f"Error running get_workflow_info: {str(e)}")
-
 
 # Execute the specified CLI function
 try:
