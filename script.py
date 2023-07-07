@@ -204,7 +204,9 @@ def process_repo(repo_name):
 for filename in os.listdir("HT2-Labs"):
     if os.path.isdir(os.path.join("HT2-Labs", filename)):
         repo_name = f"HT2-Labs/{filename}"
+        print(f"Processing repo: {repo_name}")
         process_repo(repo_name)
 
 # Save the Excel sheet
 wb.save('LP GitHub Repos.xlsx')
+print("Excel sheet saved successfully.")
