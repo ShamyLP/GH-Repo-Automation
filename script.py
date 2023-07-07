@@ -205,9 +205,9 @@ def process_repo(repo_name):
             else:
                 update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
 
-        except UnknownObjectException as e:
-            if e.status == 404:
-                print(colored(f"Failed to update {repo_name}, make sure that {repo_name} exists and has the .github/workflows directory in its root.\nEnsure that the repository name is correct and that you have appropriate access permissions to the repository and its contents.", "red"))
+        except GithubException as e:
+            if isinstance(e, UnknownObjectException) and e.status == 404:
+                print(colored(f"Please ensure that the repository {repo_name} exists and has the .github/workflows directory in its root. Make sure the repository name is correct and that you have appropriate access permissions to access the repository and its contents.", "red"))
             else:
                 raise e
 
