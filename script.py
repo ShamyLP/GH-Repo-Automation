@@ -207,7 +207,7 @@ def process_repo(repo_name):
 
         except GithubException as e:
             if isinstance(e, UnknownObjectException) and e.status == 404:
-                print(colored(f"Please ensure that the repository {repo_name} exists and has the .github/workflows directory in its root. Make sure the repository name is correct and that you have appropriate access permissions to access the repository and its contents.", "red"))
+                print(colored(f"Please ensure that the repository {repo_name} exists and has the .github/workflows directory in its root.\nEnsure the repository name is correct and that you have appropriate access permissions to access the repository and its contents.", "red"))
             else:
                 raise e
 
