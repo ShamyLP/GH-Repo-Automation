@@ -57,8 +57,8 @@ if not repos:
 # Step 7: Create a directory to store the cloned repositories
 os.makedirs(org_name, exist_ok=True)
 
-# Step 8: Change the current directory to the organization directory
-os.chdir(org_name)
+# Step 8: Change the current directory to the parent directory
+os.chdir("..")
 
 # Step 9: Create a CSV file to save the repository names and clone status
 csv_file_path = "repository_names.csv"
