@@ -129,13 +129,13 @@ def get_workflow_info(workflows):
         workflow_yaml = yaml.safe_load(workflow_content)
 
         # Extract Integration Suite
-        integration_suite = workflow_yaml.get("env", {}).get("integration")
+        integration_suite = workflow_yaml.get("env", {}).get("integration", "N/A")
 
         # Extract Concurrency Rule
-        concurrency_rule = workflow_yaml.get("concurrency", {}).get("group")
+        concurrency_rule = workflow_yaml.get("concurrency", {}).get("group", "N/A")
 
         # Extract Mend
-        mend = workflow_yaml.get("steps", {}).get("mend")
+        mend = workflow_yaml.get("steps", {}).get("mend", "N/A")
 
         # Add the extracted information to the workflow_info dictionary
         workflow_info[workflow_name] = {
@@ -145,7 +145,7 @@ def get_workflow_info(workflows):
         }
     return workflow_names, workflow_info
 
-def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha, integration_suite=None, concurrency_rule=None, mend=None):
+def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha, integration_suite="N/A", concurrency_rule="N/A", mend="N/A"):
     """
     Updates the row for the specified repo in the Excel sheet with the provided values.
     If the repository name is not found, adds a new row with the values.
@@ -166,8 +166,7 @@ def update_excel(repo_name, package_manager, dependency_management, semantic_rel
     else:
         # If the repository name is not found, add a new row with the values
         sheet.append([repo_name, '', '', package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend])
-
-        # Print failure message for each column that wasn't updated in red
+        # print failure message for each column that wasn't updated in red
         if package_manager is None:
             print(colored(f"Failed to update the Package Manager for {repo_name}", "red"))
         if dependency_management is None:
@@ -176,12 +175,6 @@ def update_excel(repo_name, package_manager, dependency_management, semantic_rel
             print(colored(f"Failed to update the Semantic Release for {repo_name}", "red"))
         if gha is None:
             print(colored(f"Failed to update the GHA for {repo_name}", "red"))
-        if integration_suite is None:
-            print(colored(f"Failed to update the Integration Suite (GHA) for {repo_name}", "red"))
-        if concurrency_rule is None:
-            print(colored(f"Failed to update the Concurrency Rule (GHA) for {repo_name}", "red"))
-        if mend is None:
-            print(colored(f"Failed to update the Mend (GHA) for {repo_name}", "red"))
 
 def process_repo(repo_name):
     """
