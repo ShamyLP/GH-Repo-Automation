@@ -145,7 +145,7 @@ def get_workflow_info(workflows):
         }
     return workflow_names, workflow_info
 
-def update_excel(repo_name, package_manager, dependency_management, semantic_release, gha, integration_suite="N/A", concurrency_rule="N/A", mend="N/A"):
+def update_excel(repo_name, package_manager="N/A", dependency_management="N/A", semantic_release="N/A", gha="N/A", integration_suite="N/A", concurrency_rule="N/A", mend="N/A"):
     """
     Updates the row for the specified repo in the Excel sheet with the provided values.
     If the repository name is not found, adds a new row with the values.
@@ -167,13 +167,13 @@ def update_excel(repo_name, package_manager, dependency_management, semantic_rel
         # If the repository name is not found, add a new row with the values
         sheet.append([repo_name, '', '', package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend])
         # print failure message for each column that wasn't updated in red
-        if package_manager is None:
+        if package_manager is "N/A":
             print(colored(f"Failed to update the Package Manager for {repo_name}", "red"))
-        if dependency_management is None:
+        if dependency_management is "N/A":
             print(colored(f"Failed to update the Dependency Management for {repo_name}", "red"))
-        if semantic_release is None:
+        if semantic_release is "N/A":
             print(colored(f"Failed to update the Semantic Release for {repo_name}", "red"))
-        if gha is None:
+        if gha is "N/A":
             print(colored(f"Failed to update the GHA for {repo_name}", "red"))
 
 def process_repo(repo_name):
