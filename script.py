@@ -82,6 +82,7 @@ def get_semantic_release(repo):
             return 'Yes'
         else:
             return 'No'
+        
     except Exception:
         # Return 'No' if any exception occurs (e.g., network error, invalid JSON, absence of package.json)
         return 'No'
@@ -128,7 +129,7 @@ def get_workflow_info(workflows):
         workflow_yaml = yaml.safe_load(workflow_content)
 
         # Extract Integration Suite
-        integration_suite = workflow_yaml.get("env", {}).get("INTEGRATION_SUITE")
+        integration_suite = workflow_yaml.get("env", {}).get("integration")
 
         # Extract Concurrency Rule
         concurrency_rule = workflow_yaml.get("concurrency", {}).get("group")
