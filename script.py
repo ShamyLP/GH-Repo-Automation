@@ -78,7 +78,7 @@ def get_semantic_release(repo):
         package_json = json.loads(repo.get_contents('package.json').decoded_content)
 
         # Check if 'semantic-release' is present in the 'devDependencies' section
-        if 'semantic-release' in package_json.get('devDependencies', {}):
+        if ('semantic-release' or '@ht2-labs/semantic-release' or '@semantic-release/git' or '@semantic-release/github') in package_json.get('devDependencies', {}):
             return 'Yes'
         else:
             return 'No'
