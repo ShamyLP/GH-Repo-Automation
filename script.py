@@ -200,9 +200,9 @@ def process_repo(repo_name):
             if workflow_info:
                 for workflow_name in workflow_names:
                     info = workflow_info[workflow_name]
-                    integration_suite = info.get("Integration Suite (GHA)")
-                    concurrency_rule = info.get("Concurrency Rule (GHA)")
-                    mend = info.get("Mend (GHA)")
+                    integration_suite = info.get("Integration")
+                    concurrency_rule = info.get("Concurrency")
+                    mend = info.get("Mend")
                     update_excel(repo.name, package_manager, dependency_management, semantic_release, gha, integration_suite, concurrency_rule, mend)  # Pass individual workflow information to update_excel function
             else:
                 update_excel(repo.name, package_manager, dependency_management, semantic_release, gha)  # Pass basic information to update_excel function
