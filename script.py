@@ -178,8 +178,6 @@ def process_repo(idx, repo_name):
 
 # Include other function definitions (get_dependency_management, get_semantic_release, get_gha, get_workflow_info, update_excel, process_repo) here
 
-# TODO: The remaining functions (get_dependency_management, get_semantic_release, get_gha, get_workflow_info, update_excel, process_repo)
-
 
 # Iterate over the repositories
 repos = ["curtar", "conversAI", "insights"]
